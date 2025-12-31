@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASR Obsession</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
+        body {
+            background-color: #050505;
+            color: #d1d1d1;
+            font-family: 'Lora', serif;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #start-btn {
+            padding: 15px 40px;
+            font-family: 'Cinzel', serif;
+            background: transparent;
+            border: 1px solid #8a0000;
+            color: #8a0000;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: 0.5s;
+            z-index: 20;
+            text-transform: uppercase;
+        }
+
+        #start-btn:hover {
+            background: #8a0000;
+            color: #000;
+            box-shadow: 0 0 30px #8a0000;
+        }
+
+        .container {
+            width: 80%;
+            max-width: 480px;
+            height: 80vh;
+            display: none; 
+            flex-direction: column;
+            justify-content: center; /* Teks selalu di tengah */
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Teks yang muncul */
+        .line {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s ease, transform 1s ease;
+            position: absolute; /* Supaya teks menumpuk/berganti */
+            width: 100%;
+        }
+
+        .line.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .line.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+
+        .highlight {
+            color: #cf0000;
+            font-weight: 600;
+            text-shadow: 0 0 15px rgba(207, 0, 0, 0.5);
+            font-style: italic;
+        }
+
+        /* Background effects */
+        .vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 30%, #000 130%);
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .noise {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.07;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 50px;
+            width: 0%;
+            height: 2px;
+            background: #8a0000;
+            transition: width 0.3s linear;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="noise"></div>
+    <div class="vignette"></div>
+
+    <button id="start-btn" onclick="startExperience()">MULAI SESI</button>
+
+    <div class="container" id="text-container">
+        </div>
+    
+    <div class="progress-bar" id="progress"></div>
+
+    <script>
+        // Puisi LENGKAP dibagi per baris agar sinkron dengan nafas bacaan
+        const poemData = [
+            { text: "Biarkan malam ini menelan sisa-sisa napas kita.", delay: 3000 },
+            { text: "Jangan nyalakan lampu.", delay: 2000 },
+            { text: "Kita lebih nyaman di dalam samar, kan?", delay: 3000 },
+            
+            { text: "Kau dan aku tahu...", delay: 2000 },
+            { text: "Kita tidak sedang mencari jalan yang terang dan mudah.", delay: 3500 },
+            { text: "Kita justru jatuh cinta pada jalan yang menyesatkan.", delay: 3500 },
+            { text: "Pada lelah yang menggigit tulang,", delay: 2500 },
+            { text: "pada rindu yang mencekik leher...", delay: 2500 },
+            { text: "namun tak pernah membunuh.", delay: 2500 },
+            
+            { text: "Akui saja.", delay: 2000 },
+            { text: "Kau menikmati rasa sakit menunggu ini.", delay: 3000 },
+            { text: "Kau menikmati setiap detak jantung saat bertaruh dengan nasib.", delay: 4000 },
+            { text: "Itu bukan beban.", delay: 2000 },
+            { text: "<span class='highlight'>Itu gairah.</span>", delay: 3000 },
+
+            { text: "Jangan menoleh lagi.", delay: 2000 },
+            { text: "Yang di belakang sana sudah habis, sudah kering.", delay: 3500 },
+            { text: "Lihat dia yang berdiri di ujung kabut itu.", delay: 3000 },
+            { text: "Sosok asing yang dingin, angkuh, tapi begitu menggoda.", delay: 4000 },
+
+            { text: "Dia tidak menjanjikan cahaya.", delay: 2500 },
+            { text: "Dia hanya menawarkan teka-teki yang membuatmu lapar.", delay: 4000 },
+            { text: "Dan kita akan datang padanya.", delay: 2500 },
+            { text: "Bukan untuk mengetuk pintu dengan sopan,", delay: 3000 },
+            { text: "tapi untuk mendobrak masuk dan memilikinya.", delay: 3500 },
+            
+            { text: "<span class='highlight' style='font-size:1.5rem'>Sampai habis.</span>", delay: 5000 }
+        ];
+
+        const container = document.getElementById('text-container');
+        const btn = document.getElementById('start-btn');
+        const progressBar = document.getElementById('progress');
+        let synth = window.speechSynthesis;
+        let currentLineElement = null;
+
+        function startExperience() {
+            btn.style.display = 'none';
+            container.style.display = 'flex';
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            }
+            playSequence(0);
+        }
+
+        function playSequence(index) {
+            if (index >= poemData.length) return;
+
+            // Hapus baris lama (efek fade out)
+            if (currentLineElement) {
+                currentLineElement.classList.remove('active');
+                currentLineElement.classList.add('fade-out');
+                setTimeout(() => {
+                    if(container.contains(currentLineElement)) {
+                        container.removeChild(currentLineElement);
+                    }
+                }, 1000);
+            }
+
+            const data = poemData[index];
+
+            // Buat elemen baru
+            const p = document.createElement('p');
+            p.className = 'line';
+            p.innerHTML = data.text;
+            container.appendChild(p);
+
+            // Update progress bar
+            let progressPercent = ((index + 1) / poemData.length) * 100;
+            progressBar.style.width = progressPercent + "%";
+
+            // Tampilkan visual
+            setTimeout(() => {
+                p.classList.add('active');
+                currentLineElement = p;
+                
+                // Mulai audio
+                speak(p.innerText, () => {
+                    // Tunggu sesuai delay yang ditentukan di array sebelum lanjut
+                    setTimeout(() => {
+                        playSequence(index + 1);
+                    }, 500); 
+                });
+            }, 500);
+        }
+
+        function speak(text, callback) {
+            // Bersihkan tag HTML untuk pembacaan suara
+            const cleanText = text.replace(/<[^>]*>?/gm, ''); 
+
+            const utterThis = new SpeechSynthesisUtterance(cleanText);
+            
+            // Cari suara Indonesia
+            const voices = synth.getVoices();
+            const indoVoice = voices.find(v => v.lang === 'id-ID');
+            if (indoVoice) utterThis.voice = indoVoice;
+
+            // Settingan Suara "Dark"
+            utterThis.pitch = 0.5; // Sangat rendah (berat)
+            utterThis.rate = 0.85; // Agak lambat
+            utterThis.volume = 1;
+
+            utterThis.onend = function () {
+                if (callback) callback();
+            };
+            
+            // Fallback jika error, tetap lanjut visualnya
+            utterThis.onerror = function () {
+                if (callback) callback(); 
+            };
+
+            synth.speak(utterThis);
+        }
+
+        // Load voices chrome fix
+        window.speechSynthesis.onvoiceschanged = function() {
+            window.speechSynthesis.getVoices();
+        };
+    </script>
+</body>
+</html>
