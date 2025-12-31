@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ASR 2026 - Final Cinematic</title>
+    <title>ASR Cinematic 2026</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@300&display=swap');
 
@@ -19,7 +19,7 @@
 
         canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0; pointer-events: none; opacity: 0.5;
+            z-index: 0; pointer-events: none; opacity: 0.45;
         }
 
         .vignette {
@@ -115,13 +115,13 @@
         }
         #start-btn:hover:not(:disabled) { background: #fff; box-shadow: 0 0 30px #fff; }
         #start-btn:disabled { background: #222; color: #444; cursor: wait; }
-        #loading-text { margin-top: 25px; color: #d4af37; font-size: 0.85rem; font-family: 'Montserrat'; font-style: italic; text-align: center; padding: 0 20px;}
+        #loading-text { margin-top: 25px; color: #d4af37; font-size: 0.85rem; font-family: 'Montserrat'; font-style: italic;}
 
     </style>
 </head>
 <body>
 
-    <audio id="bg-music" loop preload="auto">
+    <audio id="bg-music" loop>
         <source src="backsound.mp3" type="audio/mpeg">
     </audio>
 
@@ -140,19 +140,19 @@
     </div>
 
     <div id="start-overlay">
-        <button id="start-btn" onclick="handleStart()">MULAI PENGALAMAN</button>
-        <div id="loading-text">Pastikan API Key sudah diisi di dalam kode</div>
+        <button id="start-btn" onclick="init()">START EXPERIENCE</button>
+        <div id="loading-text">Pastikan file 'backsound.mp3' berada di folder yang sama</div>
     </div>
 
     <div id="poem-container"></div>
 
     <script>
         // =========================================
-        // GANTI DENGAN API KEY ELEVENLABS ANDA
-        const API_KEY = "sk_8881ef9c4fac5e340795ffbc906ea55b94dfcca0bb06208e";
+        // !!! MASUKKAN API KEY ELEVENLABS KAMU !!!
+        const API_KEY = "sk_74063a0cd3bdfef66e982f1942ec5771560aea0063ac0fdb";
         // =========================================
         
-        const VOICE_ID = "onwK4e9ZLuTAKqWW03F9"; 
+        const VOICE_ID = "onwK4e9ZLuTAKqWW03F9"; // Daniel (Deep Voice)
 
         const poemData = [
             { en: "Let the night swallow our remaining breath.", id: "Biarkan malam ini menelan sisa napas kita." },
@@ -195,27 +195,19 @@
             container.appendChild(div);
         });
 
-        async function handleStart() {
-            if (API_KEY.includes("MASUKKAN")) { alert("Harap isi API KEY di dalam kode!"); return; }
+        async function init() {
+            if (API_KEY.includes("PASTE")) { alert("Isi API KEY dulu di kode!"); return; }
             
             startBtn.disabled = true;
-            loadingText.innerText = "Mengunduh Narasi AI...";
+            loadingText.innerText = "Generating Narration AI...";
 
-            // PENTING: Trigger interaksi user untuk mengaktifkan audio
-            try {
-                bgMusic.volume = 0;
-                await bgMusic.play();
-                bgMusic.pause();
-                bgMusic.currentTime = 0;
-            } catch (e) {
-                console.warn("Autoplay block bypass aktif");
-            }
+            // Membuka jalur audio browser
+            bgMusic.volume = 0;
+            bgMusic.play().then(() => bgMusic.pause());
 
             try {
-                // Fetch suara dari API
-                audioBlobs = [];
                 for (let i = 0; i < poemData.length; i++) {
-                    loadingText.innerText = `Menyiapkan suara ${i+1}/${poemData.length}...`;
+                    loadingText.innerText = `Loading Voice ${i+1}/${poemData.length}...`;
                     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
                         method: "POST",
                         headers: { "xi-api-key": API_KEY, "Content-Type": "application/json" },
@@ -225,50 +217,41 @@
                             voice_settings: { stability: 0.5, similarity_boost: 0.8 }
                         })
                     });
-                    
-                    if (!res.ok) throw new Error("Gagal mengambil data dari ElevenLabs");
-                    
                     const blob = await res.blob();
                     audioBlobs.push(URL.createObjectURL(blob));
                 }
 
-                // Masuk ke tahap visual
                 document.getElementById('start-overlay').style.opacity = 0;
                 setTimeout(() => {
                     document.getElementById('start-overlay').style.display = 'none';
-                    if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen().catch(() => {});
-                    }
+                    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
                     startShow();
                 }, 800);
-
             } catch (e) {
-                alert("Error: Periksa API Key atau koneksi internet.");
+                alert("Error: Kuota API habis atau file backsound tidak ditemukan.");
                 startBtn.disabled = false;
-                loadingText.innerText = "Gagal. Coba lagi.";
             }
         }
 
         function startShow() {
             startFireworks();
-            
-            // Set volume musik (sesuaikan jika ada lirik agar tidak menabrak narasi)
-            bgMusic.volume = 0.2; 
+            bgMusic.volume = 0.2; // VOLUME DISESUAIKAN (20%)
+            bgMusic.currentTime = 0;
             bgMusic.play();
 
             const op = document.getElementById('opening-container');
             op.style.opacity = 1;
 
-            // Animasi Opening ASR
+            // Slide ASR
             setTimeout(() => document.getElementById('slide-asr').classList.add('visible'), 500);
             
-            // Animasi Happy New Year
+            // Slide HNY
             setTimeout(() => {
                 document.getElementById('slide-asr').classList.remove('visible');
                 setTimeout(() => document.getElementById('slide-hny').classList.add('visible'), 1200);
             }, 4500);
 
-            // Transisi ke Puisi
+            // Masuk Puisi
             setTimeout(() => {
                 document.getElementById('slide-hny').classList.remove('visible');
                 setTimeout(() => {
@@ -299,10 +282,8 @@
             const ctx = canvas.getContext('2d');
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             let p = [];
-            
             function animate() {
                 ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-                
                 if (Math.random() < 0.04) {
                     const x = Math.random()*canvas.width, y = Math.random()*canvas.height*0.4;
                     for(let i=0; i<30; i++) p.push({
@@ -310,14 +291,12 @@
                         a: 1, c: `hsl(${35+Math.random()*15}, 100%, 60%)`
                     });
                 }
-                
                 p.forEach((part, i) => {
                     part.x += part.vx; part.y += part.vy; part.a -= 0.015; part.vy += 0.02;
                     ctx.globalAlpha = part.a; ctx.fillStyle = part.c;
                     ctx.beginPath(); ctx.arc(part.x, part.y, 1.2, 0, Math.PI*2); ctx.fill();
                     if(part.a <= 0) p.splice(i, 1);
                 });
-                
                 requestAnimationFrame(animate);
             }
             animate();
